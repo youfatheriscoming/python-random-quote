@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
@@ -88,13 +89,13 @@ def plot_surface(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate a volatility smile surface from delta quotes.")
-    parser.add_argument("--spot", type=float, required=True, help="Spot price.")
-    parser.add_argument("--call-50d", type=float, required=True, help="0.5 delta call implied vol.")
-    parser.add_argument("--put-50d", type=float, required=True, help="-0.5 delta put implied vol.")
-    parser.add_argument("--call-25d", type=float, required=True, help="0.25 delta call implied vol.")
-    parser.add_argument("--put-25d", type=float, required=True, help="-0.25 delta put implied vol.")
-    parser.add_argument("--call-10d", type=float, required=True, help="0.1 delta call implied vol.")
-    parser.add_argument("--put-10d", type=float, required=True, help="-0.1 delta put implied vol.")
+    parser.add_argument("--spot", type=float, help="Spot price.")
+    parser.add_argument("--call-50d", type=float, help="0.5 delta call implied vol.")
+    parser.add_argument("--put-50d", type=float, help="-0.5 delta put implied vol.")
+    parser.add_argument("--call-25d", type=float, help="0.25 delta call implied vol.")
+    parser.add_argument("--put-25d", type=float, help="-0.25 delta put implied vol.")
+    parser.add_argument("--call-10d", type=float, help="0.1 delta call implied vol.")
+    parser.add_argument("--put-10d", type=float, help="-0.1 delta put implied vol.")
     parser.add_argument(
         "--expiries",
         type=parse_expiries,
@@ -112,18 +113,31 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def prompt_float(label: str, current: float | None) -> float:
+    if current is not None:
+        return float(current)
+    if not sys.stdin.isatty():
+        raise ValueError(f"Missing required input: {label}. Provide --{label} when running non-interactively.")
+    while True:
+        raw = input(f"Enter {label.replace('-', ' ')}: ").strip()
+        try:
+            return float(raw)
+        except ValueError:
+            print("Please enter a numeric value.")
+
+
 def main(args: Iterable[str] | None = None) -> None:
     parser = build_parser()
     options = parser.parse_args(args=args)
 
     quotes = SmileQuotes(
-        spot=options.spot,
-        call_50d=options.call_50d,
-        put_50d=options.put_50d,
-        call_25d=options.call_25d,
-        put_25d=options.put_25d,
-        call_10d=options.call_10d,
-        put_10d=options.put_10d,
+        spot=prompt_float("spot", options.spot),
+        call_50d=prompt_float("call-50d", options.call_50d),
+        put_50d=prompt_float("put-50d", options.put_50d),
+        call_25d=prompt_float("call-25d", options.call_25d),
+        put_25d=prompt_float("put-25d", options.put_25d),
+        call_10d=prompt_float("call-10d", options.call_10d),
+        put_10d=prompt_float("put-10d", options.put_10d),
     )
 
     deltas = quotes.delta_points()

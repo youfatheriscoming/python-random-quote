@@ -36,3 +36,5 @@ python vol_surface.py \
 
 The script interpolates a smooth smile across deltas, then extends it across expiries using the
 chosen term-structure scaling. The output is saved to the specified image file.
+
+If you prefer, you can also run the script without flags and it will prompt for the required inputs.
