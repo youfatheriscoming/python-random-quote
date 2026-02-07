@@ -62,3 +62,5 @@ python vol_surface.py \
 ```
 
 Use `--premium-adjusted` to switch to premium-adjusted delta.
+
+Both helpers save PNG images to the local filesystem. You can transfer the generated image (for example, `smile.png` or `surface.png`) to your phone via AirDrop, email, or cloud storage.
