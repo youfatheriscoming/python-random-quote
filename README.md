@@ -18,16 +18,22 @@ You can find your next step in [this repo's issues](../../issues/)!
 
 ## Volatility smile utility
 
-This repository now also includes a small script (`spx_smile.py`) that calculates smile metrics from quoted SPX options:
+This repository now also includes a small script (`volsmile.py`) that calculates smile metrics from quoted SPX options:
 
 - ATM vol (from 50-delta quotes)
 - 25-delta risk reversal (`RR25`) and butterfly (`BF25`)
 - 10-delta risk reversal (`RR10`) and butterfly (`BF10`)
 
-Example:
+Example (uses bundled sample defaults):
 
 ```bash
-python spx_smile.py \
+python volsmile.py
+```
+
+You can also override defaults explicitly:
+
+```bash
+python volsmile.py \
   --quotes data/spx_example_quotes.csv \
   --spot 6836.17 \
   --rate 0.00 \
