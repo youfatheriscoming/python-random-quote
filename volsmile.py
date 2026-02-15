@@ -4,8 +4,6 @@
 Runs out-of-the-box with bundled sample data when no CLI args are supplied.
 """
 
-from __future__ import annotations
-
 import argparse
 import csv
 import datetime as dt
