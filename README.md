@@ -40,3 +40,13 @@ python3 commodity_option_vol_calculator.py iv --market-price 4.2 --futures-price
 此頁面包含：
 - 歷史波動率（價格序列）
 - Black-76 隱含波動率（期貨期權）
+
+### 免參數互動模式（含中文檔名）
+
+若你直接執行：
+
+```bash
+python3 波動率計算器.py
+```
+
+程式會進入互動模式，不再因為缺少 `hist/iv` 參數而報錯。

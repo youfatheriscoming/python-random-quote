@@ -94,7 +94,7 @@ def parse_prices(prices_text: str) -> list[float]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Commodity option volatility calculator")
-    subparsers = parser.add_subparsers(dest="mode", required=True)
+    subparsers = parser.add_subparsers(dest="mode")
 
     hist = subparsers.add_parser("hist", help="Calculate historical volatility from prices")
     hist.add_argument("--prices", required=True, help="Comma-separated prices, e.g. 102,101.5,103")
@@ -114,6 +114,35 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+
+    if not args.mode:
+        print("請選擇模式: hist (歷史波動率) 或 iv (隱含波動率)")
+        mode = input("輸入模式 [hist/iv]: ").strip().lower()
+        if mode == "hist":
+            prices = parse_prices(input("輸入價格序列（逗號分隔）: "))
+            annual = input("輸入年化因子（預設252）: ").strip()
+            annualization = int(annual) if annual else 252
+            vol = historical_volatility(prices, annualization)
+            print(f"Historical Volatility: {vol:.6f} ({vol * 100:.2f}%)")
+            return
+        if mode == "iv":
+            market_price = float(input("輸入期權市價: "))
+            futures_price = float(input("輸入期貨價格: "))
+            strike = float(input("輸入履約價: "))
+            time_to_expiry = float(input("輸入到期時間（年）: "))
+            risk_free_rate = float(input("輸入無風險利率（例如0.03）: ") or "0")
+            option_type = input("輸入期權類型 [call/put]: ").strip().lower()
+            implied_vol = implied_volatility_black76(
+                market_price=market_price,
+                futures_price=futures_price,
+                strike=strike,
+                time_to_expiry=time_to_expiry,
+                risk_free_rate=risk_free_rate,
+                option_type=option_type,
+            )
+            print(f"Implied Volatility (Black-76): {implied_vol:.6f} ({implied_vol * 100:.2f}%)")
+            return
+        raise SystemExit("模式錯誤，請輸入 hist 或 iv。")
 
     if args.mode == "hist":
         prices = parse_prices(args.prices)
