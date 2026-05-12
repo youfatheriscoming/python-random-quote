@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>商品期權波動率計算器</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; margin: 0; background:#f4f6f8; color:#111; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+    .card { background:#fff; border-radius:14px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding:16px; margin-bottom:16px; }
+    h1 { font-size: 1.3rem; margin:0 0 12px; }
+    h2 { font-size: 1.05rem; margin: 0 0 10px; }
+    label { display:block; margin:10px 0 6px; font-weight:600; }
+    input, select, button, textarea { width:100%; box-sizing:border-box; font-size:16px; padding:10px; border:1px solid #d0d7de; border-radius:10px; }
+    button { background:#0a84ff; color:#fff; border:none; font-weight:700; margin-top:12px; }
+    .result { margin-top:12px; padding:10px; border-radius:10px; background:#f1f8ff; }
+    .muted { color:#666; font-size:.92rem; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>商品期權波動率計算器（iPhone 版）</h1>
+    <p class="muted">可直接在 iPhone Safari 開啟（離線也可使用）。</p>
+  </div>
+
+  <div class="card">
+    <h2>歷史波動率</h2>
+    <label>價格序列（逗號分隔）</label>
+    <textarea id="hist-prices" rows="3">100,101,99.5,102</textarea>
+    <label>年化因子</label>
+    <input id="hist-annual" type="number" value="252" />
+    <button onclick="calcHist()">計算歷史波動率</button>
+    <div id="hist-result" class="result">尚未計算</div>
+  </div>
+
+  <div class="card">
+    <h2>隱含波動率（Black-76）</h2>
+    <label>期權市價</label><input id="iv-market" type="number" value="4.2" step="0.0001" />
+    <label>期貨價格</label><input id="iv-futures" type="number" value="100" step="0.0001" />
+    <label>履約價</label><input id="iv-strike" type="number" value="102" step="0.0001" />
+    <label>到期時間（年）</label><input id="iv-time" type="number" value="0.25" step="0.0001" />
+    <label>無風險利率（如 0.03）</label><input id="iv-rate" type="number" value="0.03" step="0.0001" />
+    <label>期權類型</label>
+    <select id="iv-type"><option value="call">Call</option><option value="put">Put</option></select>
+    <button onclick="calcIv()">計算隱含波動率</button>
+    <div id="iv-result" class="result">尚未計算</div>
+  </div>
+</div>
+
+<script>
+function normalCdf(x){ return 0.5 * (1 + erf(x / Math.sqrt(2))); }
+function erf(x){
+  const sign = x >= 0 ? 1 : -1;
+  x = Math.abs(x);
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const t = 1/(1+p*x);
+  const y = 1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t)*Math.exp(-x*x);
+  return sign*y;
+}
+function black76Price(F,K,T,r,sigma,type){
+  if (sigma <= 0 || T <= 0){
+    const intrinsic = type === 'call' ? Math.max(F-K,0) : Math.max(K-F,0);
+    return Math.exp(-r*T)*intrinsic;
+  }
+  const sigSqrtT = sigma*Math.sqrt(T);
+  const d1 = (Math.log(F/K)+0.5*sigma*sigma*T)/sigSqrtT;
+  const d2 = d1-sigSqrtT;
+  const disc = Math.exp(-r*T);
+  if (type === 'call') return disc*(F*normalCdf(d1)-K*normalCdf(d2));
+  return disc*(K*normalCdf(-d2)-F*normalCdf(-d1));
+}
+function impliedVol(market,F,K,T,r,type){
+  let low=1e-6,high=5;
+  const lowP=black76Price(F,K,T,r,low,type), highP=black76Price(F,K,T,r,high,type);
+  if (market < lowP || market > highP) throw new Error('市價超出模型可解範圍，請檢查輸入。');
+  for (let i=0;i<200;i++){
+    const mid=(low+high)/2;
+    const mp=black76Price(F,K,T,r,mid,type);
+    if (Math.abs(mp-market) < 1e-8) return mid;
+    if (mp < market) low = mid; else high = mid;
+  }
+  return (low+high)/2;
+}
+function calcHist(){
+  try{
+    const prices = document.getElementById('hist-prices').value.split(',').map(s=>parseFloat(s.trim())).filter(Number.isFinite);
+    if (prices.length < 3) throw new Error('請至少輸入 3 個價格。');
+    const annual = parseFloat(document.getElementById('hist-annual').value);
+    const rets=[];
+    for (let i=1;i<prices.length;i++) rets.push(Math.log(prices[i]/prices[i-1]));
+    const mean = rets.reduce((a,b)=>a+b,0)/rets.length;
+    const varSample = rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(rets.length-1);
+    const vol = Math.sqrt(varSample)*Math.sqrt(annual);
+    document.getElementById('hist-result').textContent = `歷史波動率：${vol.toFixed(6)} (${(vol*100).toFixed(2)}%)`;
+  }catch(e){ document.getElementById('hist-result').textContent = `錯誤：${e.message}`; }
+}
+function calcIv(){
+  try{
+    const market=parseFloat(document.getElementById('iv-market').value);
+    const F=parseFloat(document.getElementById('iv-futures').value);
+    const K=parseFloat(document.getElementById('iv-strike').value);
+    const T=parseFloat(document.getElementById('iv-time').value);
+    const r=parseFloat(document.getElementById('iv-rate').value);
+    const type=document.getElementById('iv-type').value;
+    const iv=impliedVol(market,F,K,T,r,type);
+    document.getElementById('iv-result').textContent = `隱含波動率：${iv.toFixed(6)} (${(iv*100).toFixed(2)}%)`;
+  }catch(e){ document.getElementById('iv-result').textContent = `錯誤：${e.message}`; }
+}
+</script>
+</body>
+</html>
